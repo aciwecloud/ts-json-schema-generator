@@ -3,6 +3,7 @@ import type { Definition } from "../Schema/Definition.js";
 import type { SubTypeFormatter } from "../SubTypeFormatter.js";
 import type { BaseType } from "../Type/BaseType.js";
 import { EnumType } from "../Type/EnumType.js";
+import type { GetDefinitionOptions } from "../TypeFormatter.js";
 import { typeName } from "../Utils/typeName.js";
 import { uniqueArray } from "../Utils/uniqueArray.js";
 
@@ -10,7 +11,7 @@ export class EnumTypeFormatter implements SubTypeFormatter {
     public supportsType(type: BaseType): boolean {
         return type instanceof EnumType;
     }
-    public getDefinition(type: EnumType): Definition {
+    public getDefinition(type: EnumType, _options?: GetDefinitionOptions): Definition {
         const values = uniqueArray(type.getValues());
         const types = uniqueArray(values.map(typeName));
 

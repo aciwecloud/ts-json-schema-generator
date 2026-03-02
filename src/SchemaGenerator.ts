@@ -33,10 +33,7 @@ export class SchemaGenerator {
             rootType: this.nodeParser.createType(rootNode, new Context()),
         }));
 
-        const rootTypeDefinitions = roots.map((root) => this.getRootTypeDefinition(root.rootType, root.rootNode));
-        const rootTypeDefinition = rootTypeDefinitions.length === 1 ? rootTypeDefinitions[0] : undefined;
         const definitions: StringMap<Definition> = {};
-
         for (const root of roots) {
             try {
                 this.appendRootChildDefinitions(root.rootType, definitions);
@@ -48,6 +45,11 @@ export class SchemaGenerator {
                 );
             }
         }
+
+        const rootTypeDefinitions = roots.map((root) =>
+            this.getRootTypeDefinition(root.rootType, root.rootNode, definitions),
+        );
+        const rootTypeDefinition = rootTypeDefinitions.length === 1 ? rootTypeDefinitions[0] : undefined;
 
         const reachableDefinitions = rootTypeDefinitions.reduce<StringMap<Definition>>(
             (acc, def) => Object.assign(acc, removeUnreachable(def, definitions)),
@@ -102,9 +104,13 @@ export class SchemaGenerator {
         throw new RootlessError(fullName);
     }
 
-    protected getRootTypeDefinition(rootType: BaseType, rootNode: ts.Node): Definition {
+    protected getRootTypeDefinition(
+        rootType: BaseType,
+        rootNode: ts.Node,
+        definitions?: StringMap<Definition>,
+    ): Definition {
         try {
-            return this.typeFormatter.getDefinition(rootType);
+            return this.typeFormatter.getDefinition(rootType, { definitions });
         } catch (error) {
             throw UnhandledError.from("Unhandled error while creating Root Type Definition.", rootNode, error);
         }

@@ -5,6 +5,7 @@ import type { BaseType } from "../Type/BaseType.js";
 import { OptionalType } from "../Type/OptionalType.js";
 import { RestType } from "../Type/RestType.js";
 import { TupleType } from "../Type/TupleType.js";
+import type { GetDefinitionOptions } from "../TypeFormatter.js";
 import type { TypeFormatter } from "../TypeFormatter.js";
 import { notNever } from "../Utils/notNever.js";
 import { uniqueArray } from "../Utils/uniqueArray.js";
@@ -31,7 +32,7 @@ export class TupleTypeFormatter implements SubTypeFormatter {
         return type instanceof TupleType;
     }
 
-    public getDefinition(type: TupleType): Definition {
+    public getDefinition(type: TupleType, options?: GetDefinitionOptions): Definition {
         const subTypes = type.getTypes().filter(notNever);
 
         const requiredElements = subTypes.filter((t) => !(t instanceof OptionalType) && !(t instanceof RestType));
@@ -55,16 +56,16 @@ export class TupleTypeFormatter implements SubTypeFormatter {
         if (isUniformArray) {
             return {
                 type: "array",
-                items: this.childTypeFormatter.getDefinition(firstItemType),
+                items: this.childTypeFormatter.getDefinition(firstItemType, options),
                 minItems: requiredElements.length,
                 ...(restType ? {} : { maxItems: requiredElements.length + optionalElements.length }),
             };
         }
 
-        const requiredDefinitions = requiredElements.map((item) => this.childTypeFormatter.getDefinition(item));
-        const optionalDefinitions = optionalElements.map((item) => this.childTypeFormatter.getDefinition(item));
+        const requiredDefinitions = requiredElements.map((item) => this.childTypeFormatter.getDefinition(item, options));
+        const optionalDefinitions = optionalElements.map((item) => this.childTypeFormatter.getDefinition(item, options));
         const itemsTotal = requiredDefinitions.length + optionalDefinitions.length;
-        const additionalItems = restType ? this.childTypeFormatter.getDefinition(restType).items : undefined;
+        const additionalItems = restType ? this.childTypeFormatter.getDefinition(restType, options).items : undefined;
 
         return {
             type: "array",

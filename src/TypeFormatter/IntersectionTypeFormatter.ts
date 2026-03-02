@@ -4,9 +4,19 @@ import { ArrayType } from "../Type/ArrayType.js";
 import type { BaseType } from "../Type/BaseType.js";
 import { IntersectionType } from "../Type/IntersectionType.js";
 import { TupleType } from "../Type/TupleType.js";
+import type { GetDefinitionOptions } from "../TypeFormatter.js";
 import type { TypeFormatter } from "../TypeFormatter.js";
+import type { RefResolver } from "../Utils/allOfDefinition.js";
 import { getAllOfDefinitionReducer } from "../Utils/allOfDefinition.js";
 import { uniqueArray } from "../Utils/uniqueArray.js";
+
+function refResolverFromDefinitions(definitions?: Record<string, Definition>): RefResolver | undefined {
+    if (!definitions) return undefined;
+    return (ref: string) => {
+        const key = ref.replace(/^#\/definitions\//, "");
+        return definitions[decodeURIComponent(key)];
+    };
+}
 
 export class IntersectionTypeFormatter implements SubTypeFormatter {
     public constructor(protected childTypeFormatter: TypeFormatter) {}
@@ -15,7 +25,9 @@ export class IntersectionTypeFormatter implements SubTypeFormatter {
         return type instanceof IntersectionType;
     }
 
-    public getDefinition(type: IntersectionType): Definition {
+    public getDefinition(type: IntersectionType, options?: GetDefinitionOptions): Definition {
+        const refResolver = refResolverFromDefinitions(options?.definitions);
+        const reducer = getAllOfDefinitionReducer(this.childTypeFormatter, refResolver, options);
         const dependencies: Definition[] = [];
         const nonArrayLikeTypes: BaseType[] = [];
 
@@ -23,7 +35,7 @@ export class IntersectionTypeFormatter implements SubTypeFormatter {
             // Filter out Array like definitions that cannot be
             // easily mergeable into a single json-schema object
             if (t instanceof ArrayType || t instanceof TupleType) {
-                dependencies.push(this.childTypeFormatter.getDefinition(t));
+                dependencies.push(this.childTypeFormatter.getDefinition(t, options));
             } else {
                 nonArrayLikeTypes.push(t);
             }
@@ -32,7 +44,7 @@ export class IntersectionTypeFormatter implements SubTypeFormatter {
         if (nonArrayLikeTypes.length) {
             // There are non array (mergeable requirements)
             dependencies.push(
-                nonArrayLikeTypes.reduce(getAllOfDefinitionReducer(this.childTypeFormatter), {
+                nonArrayLikeTypes.reduce(reducer, {
                     type: "object",
                     additionalProperties: false,
                 }),

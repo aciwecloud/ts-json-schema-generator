@@ -7,6 +7,7 @@ import { LiteralType, type LiteralValue } from "../Type/LiteralType.js";
 import { NullType } from "../Type/NullType.js";
 import { StringType } from "../Type/StringType.js";
 import { UnionType } from "../Type/UnionType.js";
+import type { GetDefinitionOptions } from "../TypeFormatter.js";
 import { typeName } from "../Utils/typeName.js";
 import { toEnumType } from "./EnumTypeFormatter.js";
 
@@ -15,7 +16,7 @@ export class LiteralUnionTypeFormatter implements SubTypeFormatter {
         return type instanceof UnionType && type.getTypes().length > 0 && isLiteralUnion(type);
     }
 
-    public getDefinition(unionType: UnionType): Definition {
+    public getDefinition(unionType: UnionType, _options?: GetDefinitionOptions): Definition {
         let hasString = false;
         let preserveLiterals = false;
         let allStrings = true;

@@ -8,13 +8,14 @@ import { NullType } from "../Type/NullType.js";
 import { NumberType } from "../Type/NumberType.js";
 import { StringType } from "../Type/StringType.js";
 import { UnionType } from "../Type/UnionType.js";
+import type { GetDefinitionOptions } from "../TypeFormatter.js";
 import { uniqueArray } from "../Utils/uniqueArray.js";
 
 export class PrimitiveUnionTypeFormatter implements SubTypeFormatter {
     public supportsType(type: BaseType): boolean {
         return type instanceof UnionType && type.getTypes().length > 0 && this.isPrimitiveUnion(type);
     }
-    public getDefinition(type: UnionType): Definition {
+    public getDefinition(type: UnionType, _options?: GetDefinitionOptions): Definition {
         return {
             type: uniqueArray(type.getTypes().map((item) => this.getPrimitiveType(item))),
         };

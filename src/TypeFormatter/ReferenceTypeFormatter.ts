@@ -3,6 +3,7 @@ import type { SubTypeFormatter } from "../SubTypeFormatter.js";
 import type { BaseType } from "../Type/BaseType.js";
 import { DefinitionType } from "../Type/DefinitionType.js";
 import { ReferenceType } from "../Type/ReferenceType.js";
+import type { GetDefinitionOptions } from "../TypeFormatter.js";
 import type { TypeFormatter } from "../TypeFormatter.js";
 
 export class ReferenceTypeFormatter implements SubTypeFormatter {
@@ -14,7 +15,7 @@ export class ReferenceTypeFormatter implements SubTypeFormatter {
     public supportsType(type: BaseType): boolean {
         return type instanceof ReferenceType;
     }
-    public getDefinition(type: ReferenceType): Definition {
+    public getDefinition(type: ReferenceType, _options?: GetDefinitionOptions): Definition {
         const ref = type.getName();
         return { $ref: `#/definitions/${this.encodeRefs ? encodeURIComponent(ref) : ref}` };
     }
