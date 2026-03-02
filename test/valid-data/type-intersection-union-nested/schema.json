@@ -1,0 +1,96 @@
+{
+  "$ref": "#/definitions/MyObject",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "MyObject": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "category": {
+              "type": "string"
+            },
+            "contextRef": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "category"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "category": {
+              "type": "string"
+            },
+            "contextRef": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "extra": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "category",
+            "extra"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "category": {
+              "type": "string"
+            },
+            "contextRef": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "expression": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "category"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "category": {
+              "type": "string"
+            },
+            "contextRef": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "expression": {
+              "type": "string"
+            },
+            "extra": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "category",
+            "extra"
+          ],
+          "type": "object"
+        }
+      ]
+    }
+  }
+}

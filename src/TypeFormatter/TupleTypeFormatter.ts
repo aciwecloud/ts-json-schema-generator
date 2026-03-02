@@ -62,8 +62,12 @@ export class TupleTypeFormatter implements SubTypeFormatter {
             };
         }
 
-        const requiredDefinitions = requiredElements.map((item) => this.childTypeFormatter.getDefinition(item, options));
-        const optionalDefinitions = optionalElements.map((item) => this.childTypeFormatter.getDefinition(item, options));
+        const requiredDefinitions = requiredElements.map((item) =>
+            this.childTypeFormatter.getDefinition(item, options),
+        );
+        const optionalDefinitions = optionalElements.map((item) =>
+            this.childTypeFormatter.getDefinition(item, options),
+        );
         const itemsTotal = requiredDefinitions.length + optionalDefinitions.length;
         const additionalItems = restType ? this.childTypeFormatter.getDefinition(restType, options).items : undefined;
 

@@ -52,7 +52,9 @@ export class UnionTypeFormatter implements SubTypeFormatter {
             );
         }
 
-        const kindDefinitions = kindTypes.map((item) => this.childTypeFormatter.getDefinition(item as BaseType, options));
+        const kindDefinitions = kindTypes.map((item) =>
+            this.childTypeFormatter.getDefinition(item as BaseType, options),
+        );
 
         const allOf = [];
 
