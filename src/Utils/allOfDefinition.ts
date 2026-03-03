@@ -97,7 +97,10 @@ export function getAllOfDefinitionReducer(
             definition.required = uniqueArray((definition.required || []).concat(other.required)).sort();
         }
 
-        if (other.additionalProperties === true && definition.additionalProperties === false) {
+        if (
+            (other.additionalProperties || other.additionalProperties === undefined) &&
+            definition.additionalProperties == false
+        ) {
             delete definition.additionalProperties;
         }
 
