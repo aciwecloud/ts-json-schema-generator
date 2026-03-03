@@ -84,3 +84,54 @@ export type IntermediaryBindingNodeLikeExpanded =
     | (((WithCategory & { kind: "a" }) | (WithCategory & { kind: "b"; extra: number })) &
           ContextRefNode) &
           MandatoryRelation;
+
+// ---------------------------------------------------------------------------
+// Recursive-fields pattern (mirrors iwe-app-dsl BaseFieldsIntermediaryBindingNode)
+// ---------------------------------------------------------------------------
+
+/** Simple entry without recursive fields (like GenericBindingEntry). */
+export class SimpleEntry {
+    category?: string;
+    description?: string;
+}
+
+/** Auto-generation node (like OptionalAutoGenerationBindingNode). */
+export class OptionalAutoGen {
+    autoGeneration?: boolean;
+}
+
+type RequiredAutoGen = Required<OptionalAutoGen>;
+
+/**
+ * Class with recursive `fields` property, creating a circular reference
+ * (mirrors BaseFieldsIntermediaryBindingNode with fields: BindingNode[]).
+ */
+export class RecursiveFieldsNode extends SimpleEntry {
+    fields: RecursiveBindingNode[];
+}
+
+/**
+ * Union of intersections where one branch uses the recursive class.
+ * Mirrors GenericIntermediaryBindingNode = ((GenericBindingEntry & RequiredAutoGen) | (BaseFieldsIntermediaryBindingNode & OptionalAutoGen)) & ContextRefNode
+ */
+type GenericRecursiveNode = (
+    | (SimpleEntry & RequiredAutoGen)
+    | (RecursiveFieldsNode & OptionalAutoGen)
+) &
+    ContextRefNode;
+
+type RecursiveOptionalFieldsOptions<T> =
+    | T
+    | (T & MandatoryExpression)
+    | (T & MandatoryRelation);
+
+/**
+ * Final recursive type: union of intersections involving the recursive class.
+ * Mirrors IntermediaryBindingNode = AllOptionalFieldsOptions<GenericIntermediaryBindingNode>.
+ * Each anyOf branch must retain all properties (category, fields, contextRef, etc.)
+ * even though RecursiveFieldsNode triggers circular reference processing.
+ */
+export type RecursiveIntermediaryNode = RecursiveOptionalFieldsOptions<GenericRecursiveNode>;
+
+type RecursiveBindingNodeWithoutTable = RecursiveIntermediaryNode | MandatoryExpression;
+type RecursiveBindingNode = RecursiveBindingNodeWithoutTable;

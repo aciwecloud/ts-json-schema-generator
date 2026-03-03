@@ -20,6 +20,25 @@ function refResolverFromDefinitions(definitions?: Record<string, Definition>): R
     };
 }
 
+/**
+ * Recursively flatten nested IntersectionType members so each leaf type is
+ * reduced individually.  This prevents CircularReferenceTypeFormatter from
+ * caching incomplete intermediate IntersectionType definitions when one of the
+ * members triggers a circular reference (e.g. a class with recursive fields).
+ */
+function flattenIntersectionMembers(types: readonly BaseType[]): BaseType[] {
+    const result: BaseType[] = [];
+    for (const t of types) {
+        const derefed = derefType(t);
+        if (derefed instanceof IntersectionType) {
+            result.push(...flattenIntersectionMembers(derefed.getTypes()));
+        } else {
+            result.push(t);
+        }
+    }
+    return result;
+}
+
 export class IntersectionTypeFormatter implements SubTypeFormatter {
     public constructor(protected childTypeFormatter: TypeFormatter) {}
 
@@ -33,9 +52,9 @@ export class IntersectionTypeFormatter implements SubTypeFormatter {
         const dependencies: Definition[] = [];
         const nonArrayLikeTypes: BaseType[] = [];
 
-        for (const t of type.getTypes()) {
-            // Filter out Array like definitions that cannot be
-            // easily mergeable into a single json-schema object
+        const flatMembers = flattenIntersectionMembers(type.getTypes());
+
+        for (const t of flatMembers) {
             if (t instanceof ArrayType || t instanceof TupleType) {
                 dependencies.push(this.childTypeFormatter.getDefinition(t, options));
             } else {
@@ -44,7 +63,6 @@ export class IntersectionTypeFormatter implements SubTypeFormatter {
         }
 
         if (nonArrayLikeTypes.length) {
-            // Treat aliases-to-union as union members (e.g. GenericIntermediaryBindingNode in T & ContextRefNode)
             const unionTypes = nonArrayLikeTypes
                 .map((t) => derefType(t))
                 .filter((t): t is UnionType => t instanceof UnionType);
@@ -52,7 +70,6 @@ export class IntersectionTypeFormatter implements SubTypeFormatter {
             const nonUnionMembers = nonArrayLikeTypes.filter((t) => !(derefType(t) instanceof UnionType));
 
             if (!unionMember) {
-                // No union: merge all members into one object
                 dependencies.push(
                     nonArrayLikeTypes.reduce(reducer, {
                         type: "object",
@@ -60,10 +77,7 @@ export class IntersectionTypeFormatter implements SubTypeFormatter {
                     }),
                 );
             } else {
-                // Distribute intersection over union: (U1|U2|U3) & D => (U1&D)|(U2&D)|(U3&D)
                 const base = nonUnionMembers.reduce(reducer, { type: "object", additionalProperties: false });
-                // When a union branch is itself a UnionType (or alias to one, e.g. GenericIntermediaryBindingNode),
-                // flatten so each inner branch is merged with base (otherwise we get only base's properties)
                 const branchDefs = unionMember.getTypes().flatMap((branchType) => {
                     const derefed = derefType(branchType);
                     if (derefed instanceof UnionType) {

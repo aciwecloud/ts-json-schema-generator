@@ -152,3 +152,64 @@ test("type-intersection-union-nested: Same with inline union (no alias) — ever
         );
     }
 });
+
+test("type-intersection-union-nested: Recursive fields pattern (iwe BaseFieldsIntermediaryBindingNode)", () => {
+    // Mirrors the exact iwe-app-dsl pattern:
+    // - RecursiveFieldsNode is a class with `fields: RecursiveBindingNode[]` (circular ref)
+    // - GenericRecursiveNode = ((SimpleEntry & RequiredAutoGen) | (RecursiveFieldsNode & OptionalAutoGen)) & ContextRefNode
+    // - RecursiveIntermediaryNode = T | (T & MandatoryExpression) | (T & MandatoryRelation) where T = GenericRecursiveNode
+    // Each anyOf branch must retain contextRef and category/fields — not just expression/relation alone.
+    const config = {
+        ...DEFAULT_CONFIG,
+        path: path.resolve("test/valid-data/type-intersection-union-nested", "*.ts"),
+        type: "RecursiveIntermediaryNode" as const,
+        expose: "all" as const,
+    };
+    const generator = createGenerator(config);
+    const schema = generator.createSchema("RecursiveIntermediaryNode");
+    const definitions = schema.definitions ?? {};
+    type Def = { $ref?: string; anyOf?: Array<{ properties?: Record<string, unknown> }>; properties?: Record<string, unknown> };
+
+    function resolveRef(d: Def): Def {
+        let resolved = d;
+        while (resolved?.$ref && !resolved.anyOf && !resolved.properties) {
+            const refName = decodeURIComponent(resolved.$ref.replace(/^#\/definitions\//, ""));
+            resolved = definitions[refName] as Def | undefined;
+            assert(resolved, `resolved $ref "${refName}" should exist in definitions`);
+        }
+        return resolved;
+    }
+
+    let def = resolveRef(schema.anyOf ? (schema as Def) : (schema as { $ref?: string }));
+    assert(def, "schema should have definition");
+    assert(Array.isArray(def.anyOf), `definition should have anyOf, got keys: ${Object.keys(def).join(", ")}`);
+
+    function collectLeafBranches(d: Def): Array<{ properties: Record<string, unknown> }> {
+        const resolved = resolveRef(d);
+        if (resolved.anyOf) {
+            return resolved.anyOf.flatMap((b) => collectLeafBranches(b as Def));
+        }
+        assert(resolved.properties, "leaf branch should have properties");
+        return [resolved as { properties: Record<string, unknown> }];
+    }
+
+    const leafBranches = collectLeafBranches(def);
+    assert(leafBranches.length >= 4, `should have at least 4 leaf branches (2 inner × expression/relation), got ${leafBranches.length}`);
+    for (const branch of leafBranches) {
+        assert(
+            "contextRef" in branch.properties,
+            "each branch must include contextRef (from ContextRefNode); got keys: " +
+                Object.keys(branch.properties).join(", "),
+        );
+        const hasStructuralProps =
+            "category" in branch.properties ||
+            "description" in branch.properties ||
+            "fields" in branch.properties ||
+            "autoGeneration" in branch.properties;
+        assert(
+            hasStructuralProps,
+            "each branch must retain structural props (category/fields/autoGeneration); got keys: " +
+                Object.keys(branch.properties).join(", "),
+        );
+    }
+});
