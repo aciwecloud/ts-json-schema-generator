@@ -15,7 +15,7 @@ export function deepMerge(
     a: { [key: string]: JSONSchema7Definition },
     b: { [key: string]: JSONSchema7Definition },
 ): { [x: string]: JSONSchema7Definition } {
-    const output = { ...structuredClone(a), ...structuredClone(b) };
+    const output = { ...a, ...b };
 
     for (const key in a) {
         if (b.hasOwnProperty(key)) {
@@ -34,8 +34,10 @@ export function deepMerge(
                     const enums = mergeConstsAndEnums(elementA, elementB);
                     if (enums != null) {
                         const isSingle = enums.length === 1;
-                        (output as any)[key][isSingle ? "const" : "enum"] = isSingle ? enums[0] : enums;
-                        delete (output as any)[key][isSingle ? "enum" : "const"];
+                        const merged = { ...(output[key] as object) };
+                        (merged as any)[isSingle ? "const" : "enum"] = isSingle ? enums[0] : enums;
+                        delete (merged as any)[isSingle ? "enum" : "const"];
+                        output[key] = merged as JSONSchema7Definition;
                     }
                 }
             }

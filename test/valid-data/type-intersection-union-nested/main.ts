@@ -135,3 +135,35 @@ export type RecursiveIntermediaryNode = RecursiveOptionalFieldsOptions<GenericRe
 
 type RecursiveBindingNodeWithoutTable = RecursiveIntermediaryNode | MandatoryExpression;
 type RecursiveBindingNode = RecursiveBindingNodeWithoutTable;
+
+// ---------------------------------------------------------------------------
+// Inline recursive pattern (mirrors iwe-app-dsl with default expose: "export")
+//
+// Non-exported intermediary types are inlined instead of producing $ref,
+// triggering the stale IntersectionType cache bug in CircularReferenceTypeFormatter.
+// ---------------------------------------------------------------------------
+
+/** Non-exported: mirrors GenericIntermediaryBindingNode */
+type InlineGenericNode = (
+    | (SimpleEntry & RequiredAutoGen)
+    | (InlineFieldsNode & OptionalAutoGen)
+) & ContextRefNode;
+
+/** Non-exported: mirrors IntermediaryBindingNode */
+type InlineIntermediaryNode =
+    | InlineGenericNode
+    | (InlineGenericNode & MandatoryExpression)
+    | (InlineGenericNode & MandatoryRelation);
+
+/** Non-exported: mirrors BindingNode */
+type InlineBindingNode = InlineIntermediaryNode | MandatoryExpression;
+
+/** Exported class with recursive fields (like BaseFieldsIntermediaryBindingNode). */
+export class InlineFieldsNode extends SimpleEntry {
+    fields: InlineBindingNode[];
+}
+
+/** Exported root class: entry point for schema generation. */
+export class InlineRoot {
+    definition: InlineIntermediaryNode;
+}

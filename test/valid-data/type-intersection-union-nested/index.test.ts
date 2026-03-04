@@ -213,3 +213,69 @@ test("type-intersection-union-nested: Recursive fields pattern (iwe BaseFieldsIn
         );
     }
 });
+
+test("type-intersection-union-nested: Inline recursive pattern (non-exported types, default expose)", () => {
+    // Reproduces the exact iwe-app-dsl bug: non-exported intermediary types are inlined
+    // (not promoted to $ref definitions), so CircularReferenceTypeFormatter caches stale
+    // IntersectionType definitions that lack base properties (fields, category, etc.).
+    const config = {
+        ...DEFAULT_CONFIG,
+        path: path.resolve("test/valid-data/type-intersection-union-nested", "*.ts"),
+        type: "InlineRoot" as const,
+    };
+    const generator = createGenerator(config);
+    const schema = generator.createSchema("InlineRoot");
+    const definitions = schema.definitions ?? {};
+    type Def = {
+        $ref?: string;
+        anyOf?: Def[];
+        properties?: Record<string, unknown>;
+        type?: string;
+    };
+
+    function resolveRef(d: Def): Def {
+        let resolved = d;
+        while (resolved?.$ref) {
+            const refName = decodeURIComponent(resolved.$ref.replace(/^#\/definitions\//, ""));
+            resolved = definitions[refName] as Def;
+            assert(resolved, `$ref "${refName}" should exist in definitions`);
+        }
+        return resolved;
+    }
+
+    function collectLeafBranches(d: Def): Def[] {
+        const resolved = resolveRef(d);
+        if (resolved.anyOf) {
+            return resolved.anyOf.flatMap((b) => collectLeafBranches(b));
+        }
+        return [resolved];
+    }
+
+    const rootDef = resolveRef(schema as Def);
+    assert(rootDef.properties?.definition, "InlineRoot should have a 'definition' property");
+    const definitionProp = resolveRef(rootDef.properties.definition as Def);
+    const leafBranches = collectLeafBranches(definitionProp);
+
+    assert(
+        leafBranches.length >= 4,
+        `should have at least 4 leaf branches, got ${leafBranches.length}`,
+    );
+
+    for (const branch of leafBranches) {
+        assert(branch.properties, "each branch should have properties");
+        const keys = Object.keys(branch.properties);
+        assert(
+            "contextRef" in branch.properties,
+            `each branch must include contextRef; got keys: ${keys.join(", ")}`,
+        );
+        const hasStructuralProps =
+            "category" in branch.properties ||
+            "description" in branch.properties ||
+            "fields" in branch.properties ||
+            "autoGeneration" in branch.properties;
+        assert(
+            hasStructuralProps,
+            `each branch must retain structural props (category/fields/autoGeneration); got keys: ${keys.join(", ")}`,
+        );
+    }
+});

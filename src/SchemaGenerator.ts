@@ -1,4 +1,5 @@
 import ts from "typescript";
+import { CircularReferenceTypeFormatter } from "./CircularReferenceTypeFormatter.js";
 import type { Config } from "./Config.js";
 import { MultipleDefinitionsError, RootlessError, UnhandledError } from "./Error/Errors.js";
 import { Context, type NodeParser } from "./NodeParser.js";
@@ -11,6 +12,7 @@ import type { StringMap } from "./Utils/StringMap.js";
 import { AnnotatedType } from "./Type/AnnotatedType.js";
 import { hasJsDocTag } from "./Utils/hasJsDocTag.js";
 import { removeUnreachable } from "./Utils/removeUnreachable.js";
+import { buildNameMaps, deepCloneDefinition, replaceCircularRefs } from "./Utils/replaceCircularRefs.js";
 import { castArray } from "./Utils/castArray.js";
 import { symbolAtNode } from "./Utils/symbolAtNode.js";
 
@@ -46,9 +48,16 @@ export class SchemaGenerator {
             }
         }
 
+        if (this.typeFormatter instanceof CircularReferenceTypeFormatter) {
+            this.typeFormatter.recomputeIntersections({ definitions });
+        }
+
         const rootTypeDefinitions = roots.map((root) =>
             this.getRootTypeDefinition(root.rootType, root.rootNode, definitions),
         );
+
+        replaceCircularRefs(definitions, rootTypeDefinitions);
+
         const rootTypeDefinition = rootTypeDefinitions.length === 1 ? rootTypeDefinitions[0] : undefined;
 
         const reachableDefinitions = rootTypeDefinitions.reduce<StringMap<Definition>>(
@@ -56,11 +65,18 @@ export class SchemaGenerator {
             {},
         );
 
+        const { objToName, arrayToName } = buildNameMaps(reachableDefinitions);
+
+        const clonedDefinitions: StringMap<Definition> = {};
+        for (const [key, def] of Object.entries(reachableDefinitions)) {
+            clonedDefinitions[key] = deepCloneDefinition(def, objToName, arrayToName);
+        }
+
         return {
             ...(this.config?.schemaId ? { $id: this.config.schemaId } : {}),
             $schema: "http://json-schema.org/draft-07/schema#",
-            ...(rootTypeDefinition ?? {}),
-            definitions: reachableDefinitions,
+            ...(rootTypeDefinition ? deepCloneDefinition(rootTypeDefinition, objToName, arrayToName) : {}),
+            definitions: clonedDefinitions,
         };
     }
 

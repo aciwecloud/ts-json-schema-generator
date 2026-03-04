@@ -84,11 +84,10 @@ export class IntersectionTypeFormatter implements SubTypeFormatter {
                         return derefed
                             .getTypes()
                             .map((innerType) =>
-                                [innerType].reduce(reducer, JSON.parse(JSON.stringify(base)) as Definition),
+                                [innerType].reduce(reducer, { ...base }),
                             );
                     }
-                    const baseCopy = JSON.parse(JSON.stringify(base)) as Definition;
-                    return [[branchType].reduce(reducer, baseCopy)];
+                    return [[branchType].reduce(reducer, { ...base })];
                 });
                 dependencies.push(branchDefs.length === 1 ? branchDefs[0] : { anyOf: branchDefs });
             }
