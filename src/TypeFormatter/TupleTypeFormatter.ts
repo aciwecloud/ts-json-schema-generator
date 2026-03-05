@@ -69,7 +69,27 @@ export class TupleTypeFormatter implements SubTypeFormatter {
             this.childTypeFormatter.getDefinition(item, options),
         );
         const itemsTotal = requiredDefinitions.length + optionalDefinitions.length;
-        const additionalItems = restType ? this.childTypeFormatter.getDefinition(restType, options).items : undefined;
+        let additionalItems = restType ? this.childTypeFormatter.getDefinition(restType, options).items : undefined;
+
+        // When rest type is a $ref (e.g. exported alias RestItems = string[]), restDef has no .items.
+        // Resolve the ref and use the array definition's .items as additionalItems.
+        if (additionalItems === undefined && restType && options?.definitions) {
+            const restDef = this.childTypeFormatter.getDefinition(restType, options);
+            const ref = restDef.$ref;
+            if (typeof ref === "string") {
+                const key = ref.replace(/^#\/definitions\//, "");
+                const resolved = options.definitions[decodeURIComponent(key)];
+                if (
+                    resolved &&
+                    typeof resolved === "object" &&
+                    resolved.type === "array" &&
+                    resolved.items !== undefined &&
+                    !Array.isArray(resolved.items)
+                ) {
+                    additionalItems = resolved.items;
+                }
+            }
+        }
 
         return {
             type: "array",
@@ -80,7 +100,7 @@ export class TupleTypeFormatter implements SubTypeFormatter {
             ...(additionalItems && !Array.isArray(additionalItems) && itemsTotal
                 ? { additionalItems: additionalItems }
                 : {}), // with rest items
-            ...(!additionalItems && itemsTotal ? { maxItems: itemsTotal } : {}), // without rest
+            ...(!additionalItems && itemsTotal && !restType ? { maxItems: itemsTotal } : {}), // without rest
         };
     }
 
