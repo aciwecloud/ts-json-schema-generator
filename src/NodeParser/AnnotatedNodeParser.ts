@@ -6,6 +6,7 @@ import type { SubNodeParser } from "../SubNodeParser.js";
 import { AnnotatedType } from "../Type/AnnotatedType.js";
 import type { BaseType } from "../Type/BaseType.js";
 import type { ReferenceType } from "../Type/ReferenceType.js";
+import { getLiteralInitializerDefault } from "../Utils/getLiteralInitializerDefault.js";
 import { removeUndefined } from "../Utils/removeUndefined.js";
 import { DefinitionType } from "../Type/DefinitionType.js";
 import { UnionType } from "../Type/UnionType.js";
@@ -24,6 +25,10 @@ export class AnnotatedNodeParser implements SubNodeParser {
     public createType(node: ts.Node, context: Context, reference?: ReferenceType): BaseType {
         const annotatedNode = this.getAnnotatedNode(node);
         let annotations = this.annotationsReader.getAnnotations(annotatedNode);
+        const initDefault = getLiteralInitializerDefault(annotatedNode);
+        if (initDefault !== undefined) {
+            annotations = { ...(annotations ?? {}), default: initDefault };
+        }
         const nullable = this.getNullable(annotatedNode);
 
         // Short-circuit parsing the underlying type if an explicit ref annotation was passed.

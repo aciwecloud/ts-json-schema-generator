@@ -5,6 +5,7 @@ const tslib_1 = require("tslib");
 const typescript_1 = tslib_1.__importDefault(require("typescript"));
 const ExtendedAnnotationsReader_js_1 = require("../AnnotationsReader/ExtendedAnnotationsReader.js");
 const AnnotatedType_js_1 = require("../Type/AnnotatedType.js");
+const getLiteralInitializerDefault_js_1 = require("../Utils/getLiteralInitializerDefault.js");
 const removeUndefined_js_1 = require("../Utils/removeUndefined.js");
 const DefinitionType_js_1 = require("../Type/DefinitionType.js");
 const UnionType_js_1 = require("../Type/UnionType.js");
@@ -22,6 +23,10 @@ class AnnotatedNodeParser {
     createType(node, context, reference) {
         const annotatedNode = this.getAnnotatedNode(node);
         let annotations = this.annotationsReader.getAnnotations(annotatedNode);
+        const initDefault = (0, getLiteralInitializerDefault_js_1.getLiteralInitializerDefault)(annotatedNode);
+        if (initDefault !== undefined) {
+            annotations = { ...(annotations ?? {}), default: initDefault };
+        }
         const nullable = this.getNullable(annotatedNode);
         // Short-circuit parsing the underlying type if an explicit ref annotation was passed.
         if (annotations && "$ref" in annotations) {

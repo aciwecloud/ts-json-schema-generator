@@ -1,0 +1,52 @@
+{
+  "$ref": "#/definitions/MyObject",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "MyObject": {
+      "additionalProperties": false,
+      "properties": {
+        "boolInit": {
+          "default": false,
+          "type": "boolean"
+        },
+        "emptyArray": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "emptyObject": {
+          "additionalProperties": {},
+          "default": {},
+          "type": "object"
+        },
+        "fromJsDocOnly": {
+          "default": false,
+          "type": "boolean"
+        },
+        "initializerWins": {
+          "default": true,
+          "type": "boolean"
+        },
+        "mode": {
+          "default": "search",
+          "enum": [
+            "search",
+            "select"
+          ],
+          "type": "string"
+        },
+        "skipped": {
+          "description": "non-literal — must not emit default from initializer",
+          "type": "number"
+        },
+        "strInit": {
+          "default": "hello",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  }
+}
